@@ -4,13 +4,13 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import * as fs from "fs/promises";
 
 const ReviewIssueSchema = z.object({
-  file: z.string().describe("File path"),
-  line: z.number().optional().describe("Line number if applicable"),
-  severity: z.enum(["critical", "high", "medium", "low", "info"]).describe("Issue severity"),
-  category: z.enum(["security", "performance", "bug", "style", "best-practice", "maintainability"]).describe("Issue category"),
-  title: z.string().describe("Short issue title"),
-  description: z.string().describe("Detailed description of the issue"),
-  suggestion: z.string().describe("Suggested fix or improvement"),
+  file: z.string(),
+  line: z.number().optional(),
+  severity: z.string(),
+  category: z.string(),
+  title: z.string(),
+  description: z.string(),
+  suggestion: z.string(),
 });
 
 const ReviewResultSchema = z.object({

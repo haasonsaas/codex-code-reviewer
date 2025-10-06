@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Automated code review CLI tool powered by OpenAI Codex",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/cli.js",
   "bin": {
     "codex-review": "dist/cli.js"
   },
