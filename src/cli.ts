@@ -27,7 +27,14 @@ program
   .description("Analyze git diff or PR changes")
   .option("-b, --branch <branch>", "Compare against branch", "main")
   .option("-c, --commit <sha>", "Analyze specific commit")
-  .option("-o, --output <file>", "Output file for analysis results (JSON)", "diff-analysis.json")
+  .option("-o, --output <file>", "Output file for analysis results", "diff-analysis.json")
+  .option("--fail-on <severity>", "Fail build on severity: none|minor|major|critical|blocker", "none")
+  .option("--baseline <file>", "Baseline fingerprints file for filtering known issues")
+  .option("--update-baseline", "Update the baseline file with current issues", false)
+  .option("--new-issues-only", "Only fail on new issues not in baseline", true)
+  .option("--format <formats...>", "Output formats: json, sarif, markdown", ["json"])
+  .option("--max-issues <n>", "Maximum number of issues to report", parseInt)
+  .option("--timeout <ms>", "Timeout in milliseconds", parseInt, 180000)
   .action(async (options) => {
     await analyzeDiff(options);
   });
