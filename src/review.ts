@@ -1,4 +1,4 @@
-import { Codex } from "./sdk/index.js";
+import { Codex } from "@openai/codex-sdk";
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import * as fs from "fs/promises";
@@ -59,17 +59,29 @@ Return the results in the specified JSON schema format.`;
 
   try {
     const schema = zodToJsonSchema(ReviewResultSchema, { target: "openAi" });
+    const schemaPrompt = `${prompt}\n\nIMPORTANT: Return your response as valid JSON matching this schema:\n${JSON.stringify(schema, null, 2)}`;
     
     console.log("🤖 Analyzing code with Codex agent...\n");
     
-    const turn = await thread.run(prompt, { outputSchema: schema });
+    const { events } = await thread.runStreamed(schemaPrompt);
+    
+    let finalResponse = "";
+    let usage: any = null;
+    
+    for await (const event of events) {
+      if (event.type === "item.completed" && event.item.type === "agent_message") {
+        finalResponse = event.item.text;
+      } else if (event.type === "turn.completed") {
+        usage = event.usage;
+      }
+    }
     
     let result: ReviewResult;
     try {
-      result = JSON.parse(turn.finalResponse);
+      result = JSON.parse(finalResponse);
     } catch (e) {
       console.error("Failed to parse response as JSON. Raw response:");
-      console.log(turn.finalResponse);
+      console.log(finalResponse);
       throw e;
     }
 
@@ -101,11 +113,11 @@ Return the results in the specified JSON schema format.`;
     
     console.log(`\n✅ Full results saved to ${options.output}`);
     
-    if (turn.usage) {
+    if (usage) {
       console.log(`\n📈 Token Usage:`);
-      console.log(`   Input: ${turn.usage.input_tokens}`);
-      console.log(`   Cached: ${turn.usage.cached_input_tokens}`);
-      console.log(`   Output: ${turn.usage.output_tokens}`);
+      console.log(`   Input: ${usage.input_tokens}`);
+      console.log(`   Cached: ${usage.cached_input_tokens}`);
+      console.log(`   Output: ${usage.output_tokens}`);
     }
   } catch (error) {
     console.error("❌ Review failed:", error);
