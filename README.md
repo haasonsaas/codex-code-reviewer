@@ -7,7 +7,10 @@ AI-powered code review CLI tool built with the OpenAI Codex SDK. Automatically a
 ✨ **Automated Code Reviews** - Review entire codebases or specific files with AI-powered analysis  
 🔍 **Git Diff Analysis** - Analyze pull requests and commits before merging  
 💬 **PR Comment Generation** - Generate actionable inline review comments for GitHub PRs  
-📊 **Structured Output** - Get detailed JSON reports with severity levels and recommendations  
+🚨 **CI Quality Gates** - Fail builds on critical issues with configurable severity thresholds  
+📊 **Multiple Output Formats** - JSON, SARIF (GitHub Code Scanning), Markdown summaries  
+🎯 **Baseline Support** - Only fail on new issues, track technical debt over time  
+⚡ **Optimized Performance** - Thread caching, diff minimization, timeout controls  
 🎯 **Critical Issue Focus** - Detects dead code, async bugs, type errors, security vulnerabilities  
 🚀 **Powered by Codex** - Uses the latest OpenAI Codex agent for intelligent code analysis
 

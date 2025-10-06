@@ -173,18 +173,28 @@ FOCUS ON:
 - Security: injection, XSS, resource leaks
 - Race conditions, missing error handling
 
-FOR EACH ISSUE:
-1. What's wrong (concise)
-2. Why it's a problem
-3. Concrete fix
-
 SKIP: style, naming, minor optimizations, architecture opinions
 
-MERGE DECISION:
-- should_merge = false if blocker/critical issues
-- should_merge = true only if safe
+Return as JSON with this EXACT structure:
+{
+  "overall_assessment": "string",
+  "should_merge": boolean,
+  "issues": [
+    {
+      "file": "path/to/file",
+      "line_range": "10-15",
+      "type": "dead-code|null-deref|async-await|injection|etc",
+      "severity": "blocker|critical|major|minor",
+      "issue": "What's wrong (concise)",
+      "why_problem": "Why it's a problem",
+      "fix": "Concrete fix"
+    }
+  ],
+  "positive_notes": ["string"],
+  "test_coverage_notes": "string or omit"
+}
 
-Return as JSON with: overall_assessment, should_merge, issues[], positive_notes[], test_coverage_notes`;
+MERGE DECISION: should_merge = false if blocker/critical issues`;
 }
 
 async function loadBaseline(path: string): Promise<Set<string>> {
