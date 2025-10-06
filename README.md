@@ -6,8 +6,9 @@ AI-powered code review CLI tool built with the OpenAI Codex SDK. Automatically a
 
 ✨ **Automated Code Reviews** - Review entire codebases or specific files with AI-powered analysis  
 🔍 **Git Diff Analysis** - Analyze pull requests and commits before merging  
+💬 **PR Comment Generation** - Generate actionable inline review comments for GitHub PRs  
 📊 **Structured Output** - Get detailed JSON reports with severity levels and recommendations  
-🎯 **Focus Areas** - Target specific review areas: security, performance, bugs, style  
+🎯 **Critical Issue Focus** - Detects dead code, async bugs, type errors, security vulnerabilities  
 🚀 **Powered by Codex** - Uses the latest OpenAI Codex agent for intelligent code analysis
 
 ## Prerequisites
@@ -88,9 +89,62 @@ codex-review review -o my-review.json
 }
 ```
 
+### Generate PR Review Comments
+
+Generate inline review comments for critical issues (GitHub PR format):
+
+```bash
+codex-review pr-comments
+```
+
+**Options:**
+- `-b, --branch <branch>` - Compare against branch (default: `main`)
+- `-c, --commit <sha>` - Analyze specific commit
+- `-o, --output <file>` - Output file for comments (default: `pr-comments.json`)
+
+**Examples:**
+
+```bash
+# Generate comments for changes vs main
+codex-review pr-comments
+
+# Generate comments for specific commit
+codex-review pr-comments --commit abc123
+
+# Save to custom output file
+codex-review pr-comments -o review-comments.json
+```
+
+**Output:**
+
+```json
+[
+  {
+    "path": "src/auth.ts",
+    "line": 45,
+    "body": "This code block is unreachable due to the if (false) condition.\n\nWhy: This will never execute and indicates dead code.\n\nFix: Remove this entire if block."
+  }
+]
+```
+
+**Focus Areas:**
+- Dead/unreachable code
+- Broken control flow (missing break, fallthrough)
+- Async/await mistakes
+- React mutation bugs
+- UseEffect dependency issues
+- Operator errors (==, &&, assignment in conditions)
+- Off-by-one errors
+- Type coercion bugs
+- Null/undefined dereferences
+- Resource leaks
+- SQL/XSS injection
+- Race conditions
+- Missing error handling
+
 ### Analyze Git Diff
 
-Analyze changes in commits or branches:
+Get a comprehensive analysis with merge recommendation:
 
 ```bash
 codex-review diff
@@ -145,10 +199,68 @@ codex-review diff -o pr-analysis.json
 
 Use in your CI pipeline to automatically review PRs:
 
-### GitHub Actions
+### GitHub Actions - Post Review Comments
 
 ```yaml
-name: Code Review
+name: Automated Code Review
+
+on: [pull_request]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install Codex CLI
+        run: npm install -g @openai/codex
+      
+      - name: Install Code Reviewer
+        run: npm install -g codex-code-reviewer
+      
+      - name: Generate Review Comments
+        run: codex-review pr-comments --branch ${{ github.base_ref }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      
+      - name: Post Review Comments
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -f pr-comments.json ]; then
+            # Post each comment using GitHub CLI
+            jq -c '.[]' pr-comments.json | while read comment; do
+              path=$(echo $comment | jq -r '.path')
+              line=$(echo $comment | jq -r '.line')
+              body=$(echo $comment | jq -r '.body')
+              
+              gh pr comment ${{ github.event.pull_request.number }} \
+                --body "**${path}:${line}**\n\n${body}"
+            done
+          fi
+      
+      - name: Upload Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-review-comments
+          path: pr-comments.json
+```
+
+### GitHub Actions - Analysis Only
+
+```yaml
+name: Code Review Analysis
 
 on: [pull_request]
 
@@ -161,11 +273,9 @@ jobs:
         with:
           node-version: '18'
       
-      - name: Install Codex CLI
-        run: npm install -g @openai/codex
-      
-      - name: Install Code Reviewer
+      - name: Install Dependencies
         run: |
+          npm install -g @openai/codex
           npm install -g codex-code-reviewer
       
       - name: Run Code Review

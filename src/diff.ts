@@ -7,10 +7,27 @@ import { execaCommand } from "execa";
 const DiffIssueSchema = z.object({
   file: z.string().describe("File path"),
   line_range: z.string().optional().describe("Line range affected (e.g., '45-52')"),
-  type: z.enum(["bug", "security", "performance", "style", "suggestion"]).describe("Issue type"),
-  severity: z.enum(["blocker", "critical", "major", "minor", "info"]).describe("Severity"),
-  message: z.string().describe("Description of the issue"),
-  recommendation: z.string().describe("Recommended action"),
+  type: z.enum([
+    "dead-code",
+    "control-flow",
+    "async-await",
+    "mutation-bug",
+    "dependency-array",
+    "operator-error",
+    "off-by-one",
+    "type-coercion",
+    "null-deref",
+    "resource-leak",
+    "injection",
+    "race-condition",
+    "missing-error-handling",
+    "security",
+    "other"
+  ]).describe("Issue type"),
+  severity: z.enum(["blocker", "critical", "major", "minor"]).describe("Severity"),
+  issue: z.string().describe("Clear description of what's wrong"),
+  why_problem: z.string().describe("Why this is a problem"),
+  fix: z.string().describe("Concrete fix with exact code change if possible"),
 });
 
 const DiffAnalysisSchema = z.object({
@@ -47,26 +64,47 @@ export async function analyzeDiff(options: any): Promise<void> {
     const codex = new Codex();
     const thread = codex.startThread();
 
-    const prompt = `You are an expert code reviewer analyzing a git diff. Review the following changes and provide a comprehensive analysis:
+    const prompt = `You are an automated code review system. Review the PR diff and identify ONLY clear, actionable issues that need to be fixed.
 
 \`\`\`diff
 ${diff}
 \`\`\`
 
-Please analyze:
-1. Potential bugs or logic errors in the changes
-2. Security vulnerabilities introduced
-3. Performance implications
-4. Code style and best practices
-5. Test coverage (if tests are included)
-6. Breaking changes or API changes
+FOCUS ON THESE CRITICAL ISSUES:
+- Dead/unreachable code (if (false), while (false), code after return/throw/break)
+- Broken control flow (missing break in switch, fallthrough bugs)
+- Async/await mistakes (missing await, .then without return, unhandled promise rejections)
+- Array/object mutations in React components or reducers
+- UseEffect dependency array problems (missing deps, incorrect deps)
+- Incorrect operator usage (== vs ===, && vs ||, = in conditions)
+- Off-by-one errors in loops or array indexing
+- Integer overflow/underflow in calculations
+- Regex catastrophic backtracking vulnerabilities
+- Missing base cases in recursive functions
+- Incorrect type coercion that changes behavior
+- Environment variable access without defaults or validation
+- Null/undefined dereferences
+- Resource leaks (unclosed files or connections)
+- SQL/XSS injection vulnerabilities
+- Concurrency/race conditions
+- Missing error handling for critical operations
 
-Provide:
-- Overall assessment
-- Whether the changes should be merged
-- Specific issues found with severity levels
-- Positive notes about good practices
-- Test coverage assessment
+FOR EACH ISSUE:
+- Clearly describe what's wrong
+- Explain WHY it's a problem (not just that it is)
+- Provide a CONCRETE fix with exact code changes
+- Be specific, technical, no fluff
+
+SKIP:
+- Code style, formatting, or naming conventions
+- Minor performance optimizations
+- Architectural decisions or design patterns
+- Features or functionality (unless broken)
+- Test coverage (unless tests are clearly broken)
+
+MERGE DECISION:
+- should_merge = false if ANY blocker/critical issues exist
+- should_merge = true only if issues are minor/none
 
 Return results in the specified JSON schema format.`;
 
@@ -107,12 +145,12 @@ Return results in the specified JSON schema format.`;
       console.log(`🚨 Issues Found (${result.issues.length}):`);
       result.issues.forEach((issue, i) => {
         const icon = issue.severity === "blocker" || issue.severity === "critical" ? "🔴" : 
-                     issue.severity === "major" ? "🟠" : 
-                     issue.severity === "minor" ? "🟡" : "ℹ️";
+                     issue.severity === "major" ? "🟠" : "🟡";
         console.log(`\n${i + 1}. ${icon} [${issue.severity.toUpperCase()}] ${issue.type}`);
         console.log(`   File: ${issue.file}${issue.line_range ? ` (lines ${issue.line_range})` : ""}`);
-        console.log(`   ${issue.message}`);
-        console.log(`   💡 ${issue.recommendation}`);
+        console.log(`   Issue: ${issue.issue}`);
+        console.log(`   Why: ${issue.why_problem}`);
+        console.log(`   Fix: ${issue.fix}`);
       });
     } else {
       console.log("✨ No issues found!");

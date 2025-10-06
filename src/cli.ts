@@ -3,6 +3,7 @@
 import { Command } from "commander";
 import { reviewCode } from "./review.js";
 import { analyzeDiff } from "./diff.js";
+import { generatePRComments } from "./pr-comments.js";
 
 const program = new Command();
 
@@ -29,6 +30,16 @@ program
   .option("-o, --output <file>", "Output file for analysis results (JSON)", "diff-analysis.json")
   .action(async (options) => {
     await analyzeDiff(options);
+  });
+
+program
+  .command("pr-comments")
+  .description("Generate inline PR review comments for critical issues")
+  .option("-b, --branch <branch>", "Compare against branch", "main")
+  .option("-c, --commit <sha>", "Analyze specific commit")
+  .option("-o, --output <file>", "Output file for comments (JSON)", "pr-comments.json")
+  .action(async (options) => {
+    await generatePRComments(options);
   });
 
 program.parse();
