@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  security-events: write
   pull-requests: write
 
 jobs:
@@ -22,29 +21,25 @@ jobs:
         with:
           node-version: '18'
       
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Build project
+        run: npm run build
+      
       - name: Install Codex CLI
         run: npm install -g @openai/codex
       
-      - name: Install Code Reviewer
-        run: npm install -g codex-code-reviewer
-      
-      - name: Run Code Review with SARIF
+      - name: Run Code Review
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          codex-review diff \
+          node dist/cli.js diff \
             --branch ${{ github.base_ref || 'main' }} \
-            --format json sarif markdown \
+            --format json markdown \
             --fail-on critical \
             --baseline .codex-baseline.json \
             --new-issues-only
-      
-      - name: Upload SARIF to GitHub Code Scanning
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: diff-analysis.sarif
-          category: codex-review
       
       - name: Upload results as artifacts
         if: always()
@@ -53,7 +48,6 @@ jobs:
           name: code-review-results
           path: |
             diff-analysis.json
-            diff-analysis.sarif
             diff-analysis.md
       
       - name: Comment PR with summary
